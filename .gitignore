@@ -1,0 +1,72 @@
+# Compiled Lua sources
+luac.out
+
+# luarocks build files
+*.src.rock
+*.zip
+*.tar.gz
+
+# Object files
+*.o
+*.os
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+*.def
+*.exp
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Lazy plugin manager
+lazy-lock.json
+
+# Session files
+Session.vim
+sessions/
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Plugin directories (if using other package managers)
+pack/
+site/
+
+# Neovim specific
+.netrwhist
+shada/
+swap/
+undo/
+view/
+
+# Language servers
+.luarc.json
+
+# Local configuration overrides
+local.lua
