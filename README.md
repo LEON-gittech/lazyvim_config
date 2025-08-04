@@ -1,8 +1,8 @@
-# AstroNvim Template
+# AstroNvim Configuration with Buffer Groups
 
 **NOTE:** This is for AstroNvim v5+
 
-A template for getting started with [AstroNvim](https://github.com/AstroNvim/AstroNvim)
+An enhanced [AstroNvim](https://github.com/AstroNvim/AstroNvim) configuration featuring a powerful Buffer Groups management system and other productivity improvements.
 
 ## 🛠️ Installation
 
@@ -32,3 +32,49 @@ git clone https://github.com/<your_user>/<your_repository> ~/.config/nvim
 ```shell
 nvim
 ```
+
+## ✨ Key Features
+
+### 🎯 Buffer Groups Management
+
+This configuration includes a comprehensive buffer organization system that allows you to categorize and manage buffers efficiently.
+
+**What are Buffer Groups?**
+- Organize buffers into logical groups (e.g., "Backend", "Frontend", "Tests")
+- Visual indicators with color-coded tags
+- Persistent across sessions
+- Quick filtering and navigation
+
+**Quick Start:**
+- `<leader>bb` - Browse buffers with group tags
+- `<leader>bga` - Add current buffer to a group
+- `<leader>bgf` - Filter buffers by group
+
+For detailed documentation, see [Buffer Groups Guide](docs/buffer-groups.md).
+
+### 🔥 Other Enhancements
+
+- **Enhanced LSP**: Improved navigation with Glance, better Python support
+- **Smart Comments**: Context-aware commenting for embedded languages
+- **Aerial Navigation**: Quick class/function navigation
+- **Session Management**: Improved session handling with Resession
+- **Python Tools**: Integrated Ruff for fast Python formatting
+
+## 📚 Documentation
+
+- [Buffer Groups - Advanced Buffer Management](docs/buffer-groups.md) - Complete guide to the buffer groups system
+
+## 🚀 Quick Tips
+
+1. **Organize by Project Structure**:
+   ```
+   Backend 🔧 | Frontend 🎨 | Tests 🧪 | Docs 📚
+   ```
+
+2. **Use `<leader>bb` for Everything**: The enhanced buffer browser shows group tags and supports filtering
+
+3. **Visual Cues**: Each group gets a unique color in the tabline and statusline
+
+## 🤝 Contributing
+
+Feel free to submit issues and enhancement requests!
