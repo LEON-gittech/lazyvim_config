@@ -25,6 +25,7 @@ M.group_colors = {
 -- Track color assignments
 M.group_color_map = {}
 
+
 local function ensure_data_dir()
   local dir = vim.fn.fnamemodify(data_path, ":h")
   if vim.fn.isdirectory(dir) == 0 then
@@ -369,6 +370,7 @@ function M.get_tabline_buffers()
   
   return buffers
 end
+
 
 function M.setup()
   M.load_groups()

@@ -8,17 +8,17 @@ return {
   end,
   keys = {
     {
-      "<leader>bg",
+      "<leader>G",
       function() require("telescope").extensions.buffer_groups.buffer_groups() end,
       desc = "Buffer Groups",
     },
     {
-      "<leader>bG",
+      "<leader>GM",
       function() require("telescope").extensions.buffer_groups.manage_groups() end,
       desc = "Manage Groups",
     },
     {
-      "<leader>bga",
+      "<leader>Ga",
       function()
         local buffer_groups = require("utils.buffer_groups")
         local groups = buffer_groups.list_groups()
@@ -51,7 +51,7 @@ return {
       desc = "Add buffer to group",
     },
     {
-      "<leader>bgr",
+      "<leader>Gr",
       function()
         local buffer_groups = require("utils.buffer_groups")
         local groups = buffer_groups.get_buffer_groups()
@@ -71,12 +71,12 @@ return {
       desc = "Remove buffer from group",
     },
     {
-      "<leader>bgv",
+      "<leader>Gv",
       function() require("telescope").extensions.buffer_groups.group_buffers() end,
       desc = "View group buffers",
     },
     {
-      "<leader>bgc",
+      "<leader>Gc",
       function()
         vim.ui.input({ prompt = "New group name: " }, function(group_name)
           if group_name and group_name ~= "" then
@@ -87,9 +87,34 @@ return {
       desc = "Create buffer group",
     },
     {
-      "<leader>bgf",
+      "<leader>Gf",
       function() require("telescope").extensions.buffer_groups.filter_by_group() end,
       desc = "Filter buffers by group",
+    },
+    {
+      "<leader>Gs",
+      function()
+        local buffer_groups = require("utils.buffer_groups")
+        local groups = buffer_groups.list_groups()
+        
+        if #groups == 0 then
+          vim.notify("No buffer groups found", vim.log.levels.INFO)
+          return
+        end
+        
+        vim.ui.select(groups, { prompt = "Select group to open: " }, function(group_name)
+          if not group_name then return end
+          
+          local buffers = buffer_groups.get_group_buffers(group_name)
+          if #buffers > 0 then
+            vim.api.nvim_set_current_buf(buffers[1])
+            vim.notify("Opened first buffer in group: " .. group_name, vim.log.levels.INFO)
+          else
+            vim.notify("No buffers in group: " .. group_name, vim.log.levels.WARN)
+          end
+        end)
+      end,
+      desc = "Select group and open first buffer",
     },
   },
 }

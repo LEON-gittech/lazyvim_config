@@ -47,8 +47,9 @@ This configuration includes a comprehensive buffer organization system that allo
 
 **Quick Start:**
 - `<leader>bb` - Browse buffers with group tags
-- `<leader>bga` - Add current buffer to a group
-- `<leader>bgf` - Filter buffers by group
+- `<leader>Ga` - Add current buffer to a group
+- `<leader>Gs` - Select a group and open its first buffer
+- `<leader>Gf` - Filter buffers by group
 
 For detailed documentation, see [Buffer Groups Guide](docs/buffer-groups.md).
 

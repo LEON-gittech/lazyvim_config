@@ -44,8 +44,8 @@ The buffer groups system is already included in this AstroNvim configuration. It
 ### Basic Workflow
 
 1. **Open some files** in your project
-2. **Create a group**: `<leader>bgc` and enter a name (e.g., "Backend")
-3. **Add current buffer**: `<leader>bga` and select the group
+2. **Create a group**: `<leader>Gc` and enter a name (e.g., "Backend")
+3. **Add current buffer**: `<leader>Ga` and select the group
 4. **Browse grouped buffers**: `<leader>bb` to see all buffers with group tags
 
 ### Example Setup
@@ -63,17 +63,17 @@ The buffer groups system is already included in this AstroNvim configuration. It
 ### Creating and Managing Groups
 
 #### Create a Group
-- Press `<leader>bgc`
+- Press `<leader>Gc`
 - Enter a group name
 - The group is created with a unique color
 
 #### Delete a Group
-- Press `<leader>bG` to open group manager
+- Press `<leader>GM` to open group manager
 - Navigate to a group
 - Press `<C-d>` to delete
 
 #### Rename a Group
-- Press `<leader>bG` to open group manager
+- Press `<leader>GM` to open group manager
 - Navigate to a group
 - Press `<C-r>` to rename
 
@@ -82,12 +82,12 @@ The buffer groups system is already included in this AstroNvim configuration. It
 #### Add Buffer to Group
 Three ways to add buffers:
 
-1. **Current Buffer**: `<leader>bga`
+1. **Current Buffer**: `<leader>Ga`
 2. **From Buffer Picker**: `<leader>bb` then `<C-g>`
 3. **Multiple Buffers**: `<leader>bb`, select with `<Tab>`, then `<C-g>`
 
 #### Remove Buffer from Group
-- **Current Buffer**: `<leader>bgr`
+- **Current Buffer**: `<leader>Gr`
 - **From Picker**: `<leader>bb` then `<C-r>` on a buffer
 
 ### Browsing and Filtering
@@ -105,8 +105,12 @@ While in the buffer picker (`<leader>bb`):
 - Select "All Buffers" to reset
 
 #### View Group Buffers
-- Press `<leader>bgv`
+- Press `<leader>Gv`
 - Select a group to view only its buffers
+
+#### Select and Open Group
+- Press `<leader>Gs`
+- Select a group to open its first buffer
 
 ## Key Bindings
 
@@ -115,13 +119,14 @@ While in the buffer picker (`<leader>bb`):
 | Key | Description |
 |-----|-------------|
 | `<leader>bb` | Browse buffers with group tags |
-| `<leader>bg` | Open buffer groups picker |
-| `<leader>bG` | Manage groups (rename/delete) |
-| `<leader>bga` | Add current buffer to group |
-| `<leader>bgr` | Remove current buffer from group |
-| `<leader>bgv` | View buffers in specific group |
-| `<leader>bgc` | Create new group |
-| `<leader>bgf` | Filter buffers by group |
+| `<leader>G` | Open buffer groups picker |
+| `<leader>GM` | Manage groups (rename/delete) |
+| `<leader>Ga` | Add current buffer to group |
+| `<leader>Gr` | Remove current buffer from group |
+| `<leader>Gv` | View buffers in specific group |
+| `<leader>Gc` | Create new group |
+| `<leader>Gf` | Filter buffers by group |
+| `<leader>Gs` | Select group and open first buffer |
 
 ### Telescope Picker Actions
 
@@ -136,7 +141,7 @@ When in telescope buffer picker (`<leader>bb`):
 
 ### Group Manager Actions
 
-When in group manager (`<leader>bG`):
+When in group manager (`<leader>GM`):
 
 | Key | Description |
 |-----|-------------|
@@ -221,7 +226,9 @@ Buffer groups integrate with:
    Backend 🔧, Frontend 🎨, Tests 🧪, Docs 📚
    ```
 
-2. **Quick Switching**: Use `<leader>bgf` for fast context switching
+2. **Quick Switching**: Use `<leader>Gf` for fast context switching
+
+3. **Group Navigation**: Use `<leader>Gs` to quickly jump to a group's first buffer
 
 3. **Batch Operations**: Use `<Tab>` in picker to select multiple buffers
 
