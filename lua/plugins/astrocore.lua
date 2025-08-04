@@ -68,6 +68,40 @@ return {
         ["]c"] = { function() require("utils.aerial_nav").goto_next_class() end, desc = "Next class" },
         ["[c"] = { function() require("utils.aerial_nav").goto_prev_class() end, desc = "Previous class" },
 
+        -- Tab movement with wrap-around
+        ["<t"] = { 
+          function()
+            local current_tab = vim.api.nvim_tabpage_get_number(0)
+            local total_tabs = #vim.api.nvim_list_tabpages()
+            if total_tabs > 1 then
+              if current_tab == 1 then
+                vim.cmd("tabmove")  -- Move to end
+              else
+                vim.cmd("-tabmove")  -- Move left
+              end
+            end
+          end,
+          desc = "Move tab left"
+        },
+        [">t"] = {
+          function()
+            local current_tab = vim.api.nvim_tabpage_get_number(0)
+            local total_tabs = #vim.api.nvim_list_tabpages()
+            if total_tabs > 1 then
+              if current_tab == total_tabs then
+                vim.cmd("tabmove 0")  -- Move to start
+              else
+                vim.cmd("+tabmove")  -- Move right
+              end
+            end
+          end,
+          desc = "Move tab right"
+        },
+
+        -- show/preview with Glance (s prefix)
+        ["sD"] = { desc = "Show definitions (Glance)" },
+        ["sR"] = { desc = "Show references (Glance)" },
+
         -- window navigation
         ["<C-h>"] = { "<C-w>h", desc = "Move to left window" },
         ["<C-j>"] = { "<C-w>j", desc = "Move to below window" },
@@ -78,18 +112,21 @@ return {
         ["j"] = { "v:count == 0 ? 'gj' : 'j'", expr = true, desc = "Move down by display lines" },
         ["k"] = { "v:count == 0 ? 'gk' : 'k'", expr = true, desc = "Move up by display lines" },
 
+        -- Write buffer
+        ["<Leader>w"] = { "<cmd>w<cr>", desc = "Write buffer" },
+        
         -- 窗口分割
-        ["<Leader>wv"] = { "<cmd>vsplit<cr>", desc = "Vertical split" },
-        ["<Leader>ws"] = { "<cmd>split<cr>", desc = "Horizontal split" },
-        ["<Leader>wc"] = { "<cmd>close<cr>", desc = "Close window" },
-        ["<Leader>wo"] = { "<cmd>only<cr>", desc = "Close other windows" },
+        ["<Leader>Wv"] = { "<cmd>vsplit<cr>", desc = "Vertical split" },
+        ["<Leader>Ws"] = { "<cmd>split<cr>", desc = "Horizontal split" },
+        ["<Leader>Wc"] = { "<cmd>close<cr>", desc = "Close window" },
+        ["<Leader>Wo"] = { "<cmd>only<cr>", desc = "Close other windows" },
         
         -- 窗口大小调整
-        ["<Leader>w="] = { "<C-w>=", desc = "Equal window sizes" },
-        ["<Leader>w>"] = { "10<C-w>>", desc = "Increase window width" },
-        ["<Leader>w<"] = { "10<C-w><", desc = "Decrease window width" },
-        ["<Leader>w+"] = { "5<C-w>+", desc = "Increase window height" },
-        ["<Leader>w-"] = { "5<C-w>-", desc = "Decrease window height" },
+        ["<Leader>W="] = { "<C-w>=", desc = "Equal window sizes" },
+        ["<Leader>W>"] = { "10<C-w>>", desc = "Increase window width" },
+        ["<Leader>W<"] = { "10<C-w><", desc = "Decrease window width" },
+        ["<Leader>W+"] = { "5<C-w>+", desc = "Increase window height" },
+        ["<Leader>W-"] = { "5<C-w>-", desc = "Decrease window height" },
         
         -- 使用方向键调整窗口大小
         ["<C-Up>"] = { "<cmd>resize +2<cr>", desc = "Increase window height" },
@@ -129,6 +166,9 @@ return {
               local b_name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ":t")
               return a_name < b_name
             end)
+            -- 记录排序方法
+            vim.t.buffer_sort_method = "alphabetical"
+            vim.g.buffer_sort_method = "alphabetical"
           end, 
           desc = "Sort buffers alphabetically" 
         },
@@ -146,6 +186,9 @@ return {
                 return a_first < b_first
               end
             end)
+            -- 记录排序方法
+            vim.t.buffer_sort_method = "first_letter"
+            vim.g.buffer_sort_method = "first_letter"
           end, 
           desc = "Sort buffers by first letter" 
         },
@@ -157,6 +200,9 @@ return {
               local b_path = vim.api.nvim_buf_get_name(b)
               return a_path < b_path
             end)
+            -- 记录排序方法
+            vim.t.buffer_sort_method = "full_path"
+            vim.g.buffer_sort_method = "full_path"
           end,
           desc = "Sort buffers by full path"
         },
@@ -164,6 +210,9 @@ return {
           function()
             -- 按修改时间排序（最近修改的在前）
             require("astrocore.buffer").sort("modified")
+            -- 记录排序方法
+            vim.t.buffer_sort_method = "modified"
+            vim.g.buffer_sort_method = "modified"
           end,
           desc = "Sort buffers by modified time"
         },
@@ -202,9 +251,15 @@ return {
           desc = "Copy relative path" 
         },
 
-        -- LSP 增强映射（使用 Telescope）
-        ["gR"] = { "<cmd>Telescope lsp_references<cr>", desc = "Find references (Telescope)" },
+        -- LSP 增强映射（使用智能导航和 Telescope）
+        ["gR"] = { 
+          function() require("utils.lsp_navigation").smart_goto_references() end, 
+          desc = "Smart find references" 
+        },
         ["gD"] = { "<cmd>Telescope lsp_definitions<cr>", desc = "Find definitions (Telescope)" },
+        
+        -- gi 现在可以用于其他功能（如回到插入模式的最后位置）
+        ["gi"] = { "`^", desc = "Go to last insert position" },
         
         -- Leader + l 的 LSP 菜单
         ["<Leader>lR"] = { "<cmd>Telescope lsp_references<cr>", desc = "Find references" },
@@ -219,10 +274,27 @@ return {
         ["<Leader>bs"] = { desc = "Sort buffers" },
         ["<Leader>f"] = { desc = "File" },
         ["<Leader>l"] = { desc = "LSP" },
-        ["<Leader>w"] = { desc = "Windows" },
+        ["<Leader>r"] = { desc = "Refactor" },
+        ["<Leader>W"] = { desc = "Windows" },
 
         -- setting a mapping to false will disable it
         -- ["<C-S>"] = false,
+        
+        -- Restore normal < and > behavior for indentation
+        ["<"] = { "<<", desc = "Indent line left" },
+        [">"] = { ">>", desc = "Indent line right" },
+      },
+      -- Visual mode mappings
+      v = {
+        -- Restore < and > for visual mode indentation
+        ["<"] = { "<gv", desc = "Indent left and reselect" },
+        [">"] = { ">gv", desc = "Indent right and reselect" },
+      },
+      -- Visual block mode mappings
+      x = {
+        -- Restore < and > for visual block mode indentation
+        ["<"] = { "<gv", desc = "Indent left and reselect" },
+        [">"] = { ">gv", desc = "Indent right and reselect" },
       },
     },
   },

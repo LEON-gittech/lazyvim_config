@@ -40,19 +40,7 @@ return {
     end,
   },
 
-  -- 项目管理增强
-  {
-    "folke/persistence.nvim",
-    event = "BufReadPre",
-    opts = {},
-    keys = {
-      { "<leader>qs", function() require("persistence").load() end, desc = "Restore Session" },
-      { "<leader>ql", function() require("persistence").load({ last = true }) end, desc = "Restore Last Session" },
-      { "<leader>qd", function() require("persistence").stop() end, desc = "Don't Save Current Session" },
-    },
-  },
-
-  -- UI 美化 (已移除 bufferline，使用 AstroNvim 默认的 tab 隔离)
+  -- 项目管理增强已移至 session.lua
 
   -- 性能优化
   {

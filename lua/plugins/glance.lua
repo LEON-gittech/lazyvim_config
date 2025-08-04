@@ -60,9 +60,8 @@ return {
     })
   end,
   keys = {
-    { "gd", "<cmd>Glance definitions<cr>", desc = "Glance definitions" },
-    { "gr", "<cmd>Glance references<cr>", desc = "Glance references" },
+    { "sD", "<cmd>Glance definitions<cr>", desc = "Show definitions (Glance)" },
+    { "sR", "<cmd>Glance references<cr>", desc = "Show references (Glance)" },
     { "gy", "<cmd>Glance type_definitions<cr>", desc = "Glance type definitions" },
-    { "gi", "<cmd>Glance implementations<cr>", desc = "Glance implementations" },
   },
 }

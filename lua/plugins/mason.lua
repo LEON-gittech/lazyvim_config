@@ -1,5 +1,3 @@
-if true then return {} end -- WARN: REMOVE THIS LINE TO ACTIVATE THIS FILE
-
 -- Customize Mason
 
 ---@type LazySpec
@@ -13,9 +11,13 @@ return {
       ensure_installed = {
         -- install language servers
         "lua-language-server",
+        "basedpyright", -- Enhanced Pyright with more features
+        "python-lsp-server", -- Full-featured Python LSP
 
         -- install formatters
         "stylua",
+        "black", -- Python formatter
+        "isort", -- Python import sorter
 
         -- install debuggers
         "debugpy",

@@ -43,15 +43,75 @@ return {
     ---@diagnostic disable: missing-fields
     config = {
       -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
+      -- Configure basedpyright (enhanced pyright)
+      basedpyright = {
+        settings = {
+          basedpyright = {
+            analysis = {
+              typeCheckingMode = "off",
+              autoImportCompletions = true,
+              diagnosticMode = "openFilesOnly",
+              useLibraryCodeForTypes = true,
+            },
+          },
+        },
+      },
+      -- Configure python-lsp-server
+      pylsp = {
+        settings = {
+          pylsp = {
+            plugins = {
+              -- Disable plugins we don't need
+              pylint = { enabled = false },
+              flake8 = { enabled = false },
+              pycodestyle = { enabled = false },
+              mccabe = { enabled = false },
+              -- Enable jedi for better Python support
+              jedi = {
+                enabled = true,
+                environment = "/Users/leon/workspace/AsyncVerl/.venv",
+              },
+              jedi_completion = { enabled = true },
+              jedi_hover = { enabled = true },
+              jedi_references = { enabled = true },
+              jedi_signature_help = { enabled = true },
+              jedi_symbols = { enabled = true },
+            },
+          },
+        },
+      },
     },
     -- customize how language servers are attached
     handlers = {
       -- a function without a key is simply the default handler, functions take two parameters, the server name and the configured options table for that server
       -- function(server, opts) require("lspconfig")[server].setup(opts) end
 
-      -- the key is the server that is being setup with `lspconfig`
-      -- rust_analyzer = false, -- setting a handler to false will disable the set up of that language server
-      -- pyright = function(_, opts) require("lspconfig").pyright.setup(opts) end -- or a custom handler function can be passed
+      -- Disable old Python LSPs
+      pyright = false,
+      jedi_language_server = false,
+      
+      -- Use basedpyright and pylsp instead
+      basedpyright = function(_, opts)
+        require("lspconfig").basedpyright.setup(opts)
+      end,
+      pylsp = function(_, opts)
+        require("lspconfig").pylsp.setup(opts)
+      end,
+    },
+    -- Configure LSP handlers for improved navigation
+    lsp_handlers = {
+      -- Improve hover documentation
+      ["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+        border = "rounded",
+        max_width = 80,
+        max_height = 20,
+      }),
+      -- Improve signature help
+      ["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+        border = "rounded",
+        max_width = 80,
+        max_height = 20,
+      }),
     },
     -- Configure buffer local auto commands to add when attaching a language server
     autocmds = {
@@ -79,6 +139,11 @@ return {
     mappings = {
       n = {
         -- a `cond` key can provided as the string of a server capability to be required to attach, or a function with `client` and `bufnr` parameters from the `on_attach` that returns a boolean
+        gd = {
+          function() require("utils.lsp_navigation").smart_goto_definition() end,
+          desc = "Smart go to definition",
+          cond = "textDocument/definition",
+        },
         gD = {
           function() vim.lsp.buf.declaration() end,
           desc = "Declaration of current symbol",

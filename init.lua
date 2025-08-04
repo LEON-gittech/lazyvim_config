@@ -1,5 +1,15 @@
 -- This file simply bootstraps the installation of Lazy.nvim and then calls other files for execution
 -- This file doesn't necessarily need to be touched, BE CAUTIOUS editing this file and proceed at your own risk.
+
+-- 最早期的 buffer 修复，必须在所有其他代码之前
+pcall(require, "early_buffer_fix")
+
+-- 在最早期清理 vim.t.bufs，防止 Invalid buffer 错误
+pcall(require, "clean_bufs_on_start")
+
+-- 启用污染追踪（调试用）
+-- pcall(require, "trace_buf_pollution")
+
 local lazypath = vim.env.LAZY or vim.fn.stdpath "data" .. "/lazy/lazy.nvim"
 
 if not (vim.env.LAZY or (vim.uv or vim.loop).fs_stat(lazypath)) then
