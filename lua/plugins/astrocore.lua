@@ -144,8 +144,13 @@ return {
           desc = "Close buffer from tabline",
         },
         
-        -- Buffer 导航增强
-        ["<Leader>bb"] = { "<cmd>Telescope buffers<cr>", desc = "Browse buffers with Telescope" },
+        -- Buffer 导航增强 - 使用带group标签的buffer选择器
+        ["<Leader>bb"] = { 
+          function() 
+            require("telescope").extensions.buffer_groups.buffer_groups() 
+          end, 
+          desc = "Browse buffers with groups" 
+        },
         ["<Leader>bp"] = { 
           function() 
             require("astroui.status.heirline").buffer_picker(
@@ -154,8 +159,9 @@ return {
           end, 
           desc = "Pick buffer to switch" 
         },
-        ["<Tab>"] = { function() require("astrocore.buffer").nav(1) end, desc = "Next buffer" },
-        ["<S-Tab>"] = { function() require("astrocore.buffer").nav(-1) end, desc = "Previous buffer" },
+        -- Use bufferline for buffer navigation
+        -- ["<Tab>"] = { function() require("astrocore.buffer").nav(1) end, desc = "Next buffer" },
+        -- ["<S-Tab>"] = { function() require("astrocore.buffer").nav(-1) end, desc = "Previous buffer" },
         
         -- Buffer 排序
         ["<Leader>bsa"] = { 
