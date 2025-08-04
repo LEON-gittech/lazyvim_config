@@ -91,17 +91,4 @@ return {
     end,
   },
 
-  -- Add support for more embedded language scenarios
-  {
-    "nvim-treesitter/nvim-treesitter",
-    opts = {
-      -- Additional queries for better comment detection
-      autotag = {
-        enable = true,
-        enable_rename = true,
-        enable_close = true,
-        enable_close_on_slash = true,
-      },
-    },
-  },
 }
