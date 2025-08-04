@@ -112,6 +112,11 @@ While in the buffer picker (`<leader>bb`):
 - Press `<leader>Gs`
 - Select a group to open its first buffer
 
+#### Navigate Within Current Group
+- Press `<leader>Gb`
+- Shows buffers in the current buffer's group
+- Select a buffer to jump to it
+
 ## Key Bindings
 
 ### Buffer Group Management
@@ -127,6 +132,7 @@ While in the buffer picker (`<leader>bb`):
 | `<leader>Gc` | Create new group |
 | `<leader>Gf` | Filter buffers by group |
 | `<leader>Gs` | Select group and open first buffer |
+| `<leader>Gb` | Select buffer in current group |
 
 ### Telescope Picker Actions
 
@@ -230,9 +236,11 @@ Buffer groups integrate with:
 
 3. **Group Navigation**: Use `<leader>Gs` to quickly jump to a group's first buffer
 
-3. **Batch Operations**: Use `<Tab>` in picker to select multiple buffers
+4. **Within-Group Navigation**: Use `<leader>Gb` to navigate between buffers in the same group
 
-4. **Temporary Groups**: Create groups for temporary tasks
+5. **Batch Operations**: Use `<Tab>` in picker to select multiple buffers
+
+6. **Temporary Groups**: Create groups for temporary tasks
    ```
    "Bug Fix #123", "Feature: Auth", "Review: PR-456"
    ```

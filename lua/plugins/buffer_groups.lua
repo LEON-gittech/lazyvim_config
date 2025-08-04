@@ -116,5 +116,62 @@ return {
       end,
       desc = "Select group and open first buffer",
     },
+    {
+      "<leader>Gb",
+      function()
+        local buffer_groups = require("utils.buffer_groups")
+        local current_buf = vim.api.nvim_get_current_buf()
+        local groups = buffer_groups.get_buffer_groups(current_buf)
+        
+        if #groups == 0 then
+          vim.notify("Current buffer not in any group", vim.log.levels.INFO)
+          return
+        end
+        
+        -- If buffer is in multiple groups, let user choose
+        local group_name = groups[1]
+        if #groups > 1 then
+          vim.ui.select(groups, { prompt = "Select group: " }, function(choice)
+            if choice then
+              group_name = choice
+            else
+              return
+            end
+          end)
+        end
+        
+        -- Get buffers in the selected group
+        local buffers = buffer_groups.get_group_buffers(group_name)
+        if #buffers == 0 then
+          vim.notify("No buffers in group: " .. group_name, vim.log.levels.WARN)
+          return
+        end
+        
+        -- Create buffer list with names for selection
+        local buffer_list = {}
+        for _, bufnr in ipairs(buffers) do
+          local name = vim.api.nvim_buf_get_name(bufnr)
+          local display_name = name ~= "" and vim.fn.fnamemodify(name, ":t") or "[No Name]"
+          table.insert(buffer_list, {
+            bufnr = bufnr,
+            display = display_name,
+            path = name
+          })
+        end
+        
+        -- Show selection menu
+        vim.ui.select(buffer_list, {
+          prompt = "Select buffer in group '" .. group_name .. "': ",
+          format_item = function(item)
+            return item.display
+          end
+        }, function(choice)
+          if choice then
+            vim.api.nvim_set_current_buf(choice.bufnr)
+          end
+        end)
+      end,
+      desc = "Select buffer in current group",
+    },
   },
 }
