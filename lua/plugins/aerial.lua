@@ -29,8 +29,8 @@ return {
       default_direction = "right",
       placement = "window",
       preserve_equality = false,
-      max_width = { 40, 0.2 },
-      min_width = 20,
+      max_width = { 60, 0.3 },
+      min_width = 30,
       win_opts = {
         winhl = "Normal:NormalFloat,FloatBorder:NormalFloat,SignColumn:SignColumnSB",
         signcolumn = "yes",
@@ -38,7 +38,7 @@ return {
       },
     },
     attach_mode = "window",
-    close_automatic_events = { "unfocus" },
+    close_automatic_events = {},
     show_guides = true,
     guides = {
       mid_item = "├─",
