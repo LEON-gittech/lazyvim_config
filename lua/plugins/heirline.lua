@@ -188,20 +188,6 @@ return {
       vim.cmd.redrawtabline()
     end
     
-    vim.api.nvim_create_autocmd({ "TabEnter", "BufAdd", "BufDelete" }, {
-      group = vim.api.nvim_create_augroup("BufferGroupsTablineSort", { clear = true }),
-      callback = update_tabline,
-    })
-    
-    -- Also update on BufferGroupsUpdate event
-    vim.api.nvim_create_autocmd("User", {
-      pattern = "BufferGroupsUpdate",
-      group = vim.api.nvim_create_augroup("BufferGroupsTablineUpdate", { clear = true }),
-      callback = update_tabline,
-    })
-    
-    -- Initial setup
-    update_group_map()
     
     return opts
   end,

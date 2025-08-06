@@ -124,7 +124,7 @@ While in the buffer picker (`<leader>bb`):
 | Key | Description |
 |-----|-------------|
 | `<leader>bb` | Browse buffers with group tags |
-| `<leader>G` | Open buffer groups picker |
+| `<leader>G` | Buffer Groups prefix (which-key will show menu) |
 | `<leader>GM` | Manage groups (rename/delete) |
 | `<leader>Ga` | Add current buffer to group |
 | `<leader>Gr` | Remove current buffer from group |

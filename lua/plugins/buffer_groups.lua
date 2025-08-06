@@ -4,14 +4,14 @@ return {
     "nvim-lua/plenary.nvim",
   },
   config = function()
+    -- Initialize buffer groups first
+    local buffer_groups = require("utils.buffer_groups")
+    buffer_groups.setup()
+    
+    -- Then load telescope extension
     require("telescope").load_extension("buffer_groups")
   end,
   keys = {
-    {
-      "<leader>G",
-      function() require("telescope").extensions.buffer_groups.buffer_groups() end,
-      desc = "Buffer Groups",
-    },
     {
       "<leader>GM",
       function() require("telescope").extensions.buffer_groups.manage_groups() end,

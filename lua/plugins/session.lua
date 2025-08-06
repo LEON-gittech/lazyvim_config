@@ -9,9 +9,9 @@ return {
         interval = 60, -- 每60秒自动保存
         notify = false, -- 不显示保存通知
       },
-      -- 保存更多内容
+      -- 保存更多内容，包括buffer groups
       extensions = {
-        -- 移除 astronvim 扩展，使用默认扩展
+        buffer_groups = {},
       },
       -- 配置要保存的内容
       buf_filter = function(bufnr)

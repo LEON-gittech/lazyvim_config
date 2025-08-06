@@ -29,7 +29,7 @@ return {
       default_direction = "right",
       placement = "window",
       preserve_equality = false,
-      max_width = { 60, 0.3 },
+      max_width = { 40, 0.3 },
       min_width = 30,
       win_opts = {
         winhl = "Normal:NormalFloat,FloatBorder:NormalFloat,SignColumn:SignColumnSB",
@@ -54,7 +54,7 @@ return {
     autojump = false,
     manage_folds = false,
     link_folds_to_tree = false,
-    link_tree_to_folds = true,
+    link_tree_to_folds = false,
     nerd_font = "auto",
     on_attach = function(bufnr)
       -- Jump forwards/backwards with '{' and '}'
@@ -114,11 +114,32 @@ return {
   config = function(_, opts)
     require("aerial").setup(opts)
     
+    -- Set initial collapse level when aerial opens
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "AerialOpen",
+      callback = function()
+        vim.defer_fn(function()
+          local aerial = require("aerial")
+          -- Collapse to level 2 (classes expanded, functions collapsed)
+          -- This only affects the tree display, not code folding
+          pcall(aerial.tree_set_collapse_level, 0, 2)
+        end, 50)
+      end,
+    })
+    
     -- Set up autocmd for aerial buffer
     vim.api.nvim_create_autocmd("FileType", {
       pattern = "aerial",
       callback = function()
         local buf = vim.api.nvim_get_current_buf()
+        
+        -- Disable horizontal scrolling
+        vim.keymap.set({"n", "i", "v"}, "<ScrollWheelLeft>", "<nop>", { buffer = buf, silent = true })
+        vim.keymap.set({"n", "i", "v"}, "<ScrollWheelRight>", "<nop>", { buffer = buf, silent = true })
+        vim.keymap.set({"n", "i", "v"}, "<S-ScrollWheelLeft>", "<nop>", { buffer = buf, silent = true })
+        vim.keymap.set({"n", "i", "v"}, "<S-ScrollWheelRight>", "<nop>", { buffer = buf, silent = true })
+        vim.keymap.set({"n", "i", "v"}, "<C-ScrollWheelLeft>", "<nop>", { buffer = buf, silent = true })
+        vim.keymap.set({"n", "i", "v"}, "<C-ScrollWheelRight>", "<nop>", { buffer = buf, silent = true })
         
         -- Enable double-click to jump (should already work, but ensure it's set)
         vim.keymap.set('n', '<2-LeftMouse>', '<CR>', {

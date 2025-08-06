@@ -108,7 +108,7 @@ local function buffer_picker(opts)
   if opts.filter_group then
     prompt_title = "Buffers in: " .. opts.filter_group
   else
-    prompt_title = "Buffers (C-f: filter, C-g: add to group, C-r: remove)"
+    prompt_title = "Buffers (C-f: filter, C-a: add to group, C-d: remove)"
   end
   
   pickers.new(opts, {
@@ -146,17 +146,13 @@ local function buffer_picker(opts)
       end
       
       local function add_to_group()
-        local selected = {}
-        action_state.get_current_picker(prompt_bufnr):map_selections(function(entry)
-          table.insert(selected, entry.bufnr)
-        end)
-        
-        if #selected == 0 then
-          local entry = action_state.get_selected_entry()
-          if entry then
-            selected = { entry.bufnr }
-          end
+        local entry = action_state.get_selected_entry()
+        if not entry then 
+          vim.notify("No buffer selected", vim.log.levels.WARN)
+          return 
         end
+        
+        local selected = { entry.bufnr }
         
         if #selected > 0 then
           actions.close(prompt_bufnr)
@@ -208,12 +204,107 @@ local function buffer_picker(opts)
         end
       end)
       
-      map("i", "<C-g>", add_to_group)
-      map("n", "<C-g>", add_to_group)
-      map("i", "<C-r>", remove_from_group)
-      map("n", "<C-r>", remove_from_group)
+      local function delete_buffer_i()
+        local entry = action_state.get_selected_entry()
+        if not entry then 
+          vim.notify("No buffer selected", vim.log.levels.WARN)
+          return 
+        end
+        
+        local bufnr = entry.bufnr
+        local current_buf = vim.api.nvim_get_current_buf()
+        
+        -- 如果要删除的是当前buffer，先切换到其他buffer
+        if bufnr == current_buf then
+          local buffers = vim.api.nvim_list_bufs()
+          local found_alternative = false
+          
+          for _, buf in ipairs(buffers) do
+            if buf ~= bufnr and vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
+              vim.api.nvim_set_current_buf(buf)
+              found_alternative = true
+              break
+            end
+          end
+          
+          -- 如果没有其他buffer，创建一个新的空buffer
+          if not found_alternative then
+            vim.cmd("enew")
+          end
+        end
+        
+        -- 安全删除buffer
+        local ok, err = pcall(vim.api.nvim_buf_delete, bufnr, { force = false })
+        if not ok then
+          vim.notify("Failed to delete buffer: " .. tostring(err), vim.log.levels.ERROR)
+          return
+        end
+        
+        -- 延迟刷新telescope显示，保持insert mode
+        vim.defer_fn(function()
+          actions.close(prompt_bufnr)
+          local new_opts = vim.tbl_extend("force", opts, { initial_mode = "insert" })
+          buffer_picker(new_opts)
+        end, 100)
+      end
+      
+      local function delete_buffer_n()
+        local entry = action_state.get_selected_entry()
+        if not entry then 
+          vim.notify("No buffer selected", vim.log.levels.WARN)
+          return 
+        end
+        
+        local bufnr = entry.bufnr
+        local current_buf = vim.api.nvim_get_current_buf()
+        
+        -- 如果要删除的是当前buffer，先切换到其他buffer
+        if bufnr == current_buf then
+          local buffers = vim.api.nvim_list_bufs()
+          local found_alternative = false
+          
+          for _, buf in ipairs(buffers) do
+            if buf ~= bufnr and vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
+              vim.api.nvim_set_current_buf(buf)
+              found_alternative = true
+              break
+            end
+          end
+          
+          -- 如果没有其他buffer，创建一个新的空buffer
+          if not found_alternative then
+            vim.cmd("enew")
+          end
+        end
+        
+        -- 安全删除buffer
+        local ok, err = pcall(vim.api.nvim_buf_delete, bufnr, { force = false })
+        if not ok then
+          vim.notify("Failed to delete buffer: " .. tostring(err), vim.log.levels.ERROR)
+          return
+        end
+        
+        -- 延迟刷新telescope显示，保持normal mode
+        vim.defer_fn(function()
+          actions.close(prompt_bufnr)
+          local new_opts = vim.tbl_extend("force", opts, { initial_mode = "normal" })
+          buffer_picker(new_opts)
+        end, 100)
+      end
+      
+      map("i", "<C-a>", add_to_group)
+      map("n", "<C-a>", add_to_group)
+      map("i", "<C-d>", remove_from_group)
+      map("n", "<C-d>", remove_from_group)
       map("i", "<C-f>", filter_by_group)
       map("n", "<C-f>", filter_by_group)
+      map("i", "<C-x>", delete_buffer_i)
+      map("n", "<C-x>", delete_buffer_n)
+      map("n", "dd", delete_buffer_n)
+      map("i", "<Tab>", actions.toggle_selection + actions.move_selection_next)
+      map("n", "<Tab>", actions.toggle_selection + actions.move_selection_next)
+      map("i", "<S-Tab>", actions.toggle_selection + actions.move_selection_previous)
+      map("n", "<S-Tab>", actions.toggle_selection + actions.move_selection_previous)
       
       return true
     end,
