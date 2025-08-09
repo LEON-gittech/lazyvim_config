@@ -8,6 +8,18 @@ return {
     local buffer_groups = require("utils.buffer_groups")
     buffer_groups.setup()
     
+    -- Auto-restore buffer groups on VimEnter
+    vim.api.nvim_create_autocmd("VimEnter", {
+      group = vim.api.nvim_create_augroup("BufferGroupsAutoRestore", { clear = true }),
+      callback = function()
+        -- Delay slightly to ensure buffers are loaded
+        vim.defer_fn(function()
+          buffer_groups.update_buffer_mappings()
+          vim.api.nvim_exec_autocmds("User", { pattern = "BufferGroupsUpdate" })
+        end, 100)
+      end,
+    })
+    
     -- Then load telescope extension
     require("telescope").load_extension("buffer_groups")
   end,

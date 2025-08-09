@@ -56,30 +56,30 @@ return {
           },
         },
       },
-      -- Configure python-lsp-server
-      pylsp = {
-        settings = {
-          pylsp = {
-            plugins = {
-              -- Disable plugins we don't need
-              pylint = { enabled = false },
-              flake8 = { enabled = false },
-              pycodestyle = { enabled = false },
-              mccabe = { enabled = false },
-              -- Enable jedi for better Python support
-              jedi = {
-                enabled = true,
-                environment = "/Users/leon/workspace/AsyncVerl/.venv",
-              },
-              jedi_completion = { enabled = true },
-              jedi_hover = { enabled = true },
-              jedi_references = { enabled = true },
-              jedi_signature_help = { enabled = true },
-              jedi_symbols = { enabled = true },
-            },
-          },
-        },
-      },
+      -- pylsp configuration commented out since we're using basedpyright
+      -- pylsp = {
+      --   settings = {
+      --     pylsp = {
+      --       plugins = {
+      --         -- Disable plugins we don't need
+      --         pylint = { enabled = false },
+      --         flake8 = { enabled = false },
+      --         pycodestyle = { enabled = false },
+      --         mccabe = { enabled = false },
+      --         -- Enable jedi for better Python support
+      --         jedi = {
+      --           enabled = true,
+      --           environment = "/Users/leon/workspace/AsyncVerl/.venv",
+      --         },
+      --         jedi_completion = { enabled = true },
+      --         jedi_hover = { enabled = true },
+      --         jedi_references = { enabled = true },
+      --         jedi_signature_help = { enabled = true },
+      --         jedi_symbols = { enabled = true },
+      --       },
+      --     },
+      --   },
+      -- },
     },
     -- customize how language servers are attached
     handlers = {
@@ -89,13 +89,11 @@ return {
       -- Disable old Python LSPs
       pyright = false,
       jedi_language_server = false,
+      pylsp = false,  -- Disable pylsp to avoid duplicates with basedpyright
       
-      -- Use basedpyright and pylsp instead
+      -- Use only basedpyright for Python
       basedpyright = function(_, opts)
         require("lspconfig").basedpyright.setup(opts)
-      end,
-      pylsp = function(_, opts)
-        require("lspconfig").pylsp.setup(opts)
       end,
     },
     -- Configure LSP handlers for improved navigation
@@ -142,12 +140,10 @@ return {
         gd = {
           function() require("utils.lsp_navigation").smart_goto_definition() end,
           desc = "Smart go to definition",
-          cond = "textDocument/definition",
         },
         gD = {
-          function() vim.lsp.buf.declaration() end,
-          desc = "Declaration of current symbol",
-          cond = "textDocument/declaration",
+          function() require("utils.lsp_navigation").smart_goto_declaration() end,
+          desc = "Declaration of current symbol (or definition)",
         },
         ["<Leader>uY"] = {
           function() require("astrolsp.toggles").buffer_semantic_tokens() end,

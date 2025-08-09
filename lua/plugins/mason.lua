@@ -11,8 +11,7 @@ return {
       ensure_installed = {
         -- install language servers
         "lua-language-server",
-        "basedpyright", -- Enhanced Pyright with more features
-        "python-lsp-server", -- Full-featured Python LSP
+        "basedpyright", -- Enhanced Pyright for Python (disabled pylsp to avoid duplicates)
 
         -- install formatters
         "stylua",

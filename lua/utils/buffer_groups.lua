@@ -3,6 +3,7 @@ local M = {}
 local data_path = vim.fn.stdpath("data") .. "/buffer_groups.json"
 
 M.groups = {}
+M.path_to_bufnr_cache = {} -- Cache for mapping paths to bufnr
 
 -- Nice color palette for groups
 M.group_colors = {
@@ -24,6 +25,21 @@ M.group_colors = {
 
 -- Track color assignments
 M.group_color_map = {}
+
+-- Track current group context (for telescope-selected groups)
+M.current_group_context = nil
+
+function M.set_group_context(group_name)
+  M.current_group_context = group_name
+end
+
+function M.get_group_context()
+  return M.current_group_context
+end
+
+function M.clear_group_context()
+  M.current_group_context = nil
+end
 
 
 local function ensure_data_dir()
@@ -66,13 +82,56 @@ function M.save_groups()
   ensure_data_dir()
   local file = io.open(data_path, "w")
   if file then
+    -- Convert bufnr to paths for persistence
+    local groups_with_paths = {}
+    for group_name, group_data in pairs(M.groups) do
+      local group_copy = vim.deepcopy(group_data)
+      local paths = {}
+      for _, bufnr in ipairs(group_data.buffers) do
+        if vim.api.nvim_buf_is_valid(bufnr) then
+          local path = vim.api.nvim_buf_get_name(bufnr)
+          if path and path ~= "" then
+            table.insert(paths, path)
+          end
+        end
+      end
+      group_copy.buffer_paths = paths
+      group_copy.buffers = nil -- Don't save bufnr list
+      groups_with_paths[group_name] = group_copy
+    end
+    
     local data = {
-      groups = M.groups,
+      groups = groups_with_paths,
       color_map = M.group_color_map
     }
     file:write(vim.json.encode(data))
     file:close()
   end
+end
+
+-- Helper function to find or create buffer for a path
+local function get_or_create_bufnr(path)
+  -- Check cache first
+  if M.path_to_bufnr_cache[path] then
+    local cached_bufnr = M.path_to_bufnr_cache[path]
+    if vim.api.nvim_buf_is_valid(cached_bufnr) then
+      return cached_bufnr
+    end
+  end
+  
+  -- Find existing buffer with this path
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      local buf_path = vim.api.nvim_buf_get_name(bufnr)
+      if buf_path == path then
+        M.path_to_bufnr_cache[path] = bufnr
+        return bufnr
+      end
+    end
+  end
+  
+  -- Buffer doesn't exist yet, will be created when file is opened
+  return nil
 end
 
 function M.load_groups()
@@ -84,11 +143,40 @@ function M.load_groups()
       local ok, data = pcall(vim.json.decode, content)
       if ok and type(data) == "table" then
         if data.groups then
-          M.groups = data.groups
+          -- Convert paths back to bufnr
+          M.groups = {}
+          for group_name, group_data in pairs(data.groups) do
+            local buffers = {}
+            
+            -- Handle new format with buffer_paths
+            if group_data.buffer_paths then
+              for _, path in ipairs(group_data.buffer_paths) do
+                local bufnr = get_or_create_bufnr(path)
+                if bufnr then
+                  table.insert(buffers, bufnr)
+                end
+              end
+            -- Handle old format with buffers (bufnr)
+            elseif group_data.buffers then
+              -- Old format, try to recover valid buffers
+              for _, bufnr in ipairs(group_data.buffers) do
+                if vim.api.nvim_buf_is_valid(bufnr) then
+                  table.insert(buffers, bufnr)
+                end
+              end
+            end
+            
+            M.groups[group_name] = {
+              name = group_data.name,
+              buffers = buffers,
+              created = group_data.created,
+              buffer_paths = group_data.buffer_paths or {} -- Keep paths for reference
+            }
+          end
           M.group_color_map = data.color_map or {}
         else
-          -- Old format, backward compatibility
-          M.groups = data
+          -- Very old format, ignore
+          M.groups = {}
         end
       end
     end
@@ -296,7 +384,41 @@ function M.cleanup_invalid_buffers()
   
   if cleaned then
     M.save_groups()
-    vim.notify("Cleaned up invalid buffers from groups", vim.log.levels.INFO)
+    -- Don't notify on cleanup to avoid noise
+  end
+end
+
+-- Update buffer mappings when files are opened
+function M.update_buffer_mappings()
+  for group_name, group_data in pairs(M.groups) do
+    if group_data.buffer_paths then
+      local updated_buffers = {}
+      for _, path in ipairs(group_data.buffer_paths) do
+        local bufnr = get_or_create_bufnr(path)
+        if bufnr then
+          table.insert(updated_buffers, bufnr)
+        end
+      end
+      -- Merge with existing buffers that might not have paths yet
+      for _, bufnr in ipairs(group_data.buffers) do
+        if vim.api.nvim_buf_is_valid(bufnr) then
+          local buf_path = vim.api.nvim_buf_get_name(bufnr)
+          if buf_path and buf_path ~= "" then
+            local found = false
+            for _, existing_bufnr in ipairs(updated_buffers) do
+              if existing_bufnr == bufnr then
+                found = true
+                break
+              end
+            end
+            if not found then
+              table.insert(updated_buffers, bufnr)
+            end
+          end
+        end
+      end
+      group_data.buffers = updated_buffers
+    end
   end
 end
 
@@ -333,7 +455,7 @@ function M.get_buffers_by_groups()
     end
   end
   
-  -- Add ungrouped buffers
+  -- Add ungrouped buffers at the beginning
   local ungrouped = {}
   for _, bufnr in ipairs(all_buffers) do
     if not assigned_buffers[bufnr] then
@@ -342,7 +464,8 @@ function M.get_buffers_by_groups()
   end
   
   if #ungrouped > 0 then
-    table.insert(result, {
+    -- Insert ungrouped at the beginning instead of the end
+    table.insert(result, 1, {
       name = "Ungrouped",
       buffers = ungrouped,
       is_group = true
@@ -375,10 +498,73 @@ end
 function M.setup()
   M.load_groups()
   
+  local group = vim.api.nvim_create_augroup("BufferGroups", { clear = true })
+  
+  -- Auto-clear group context when switching to unrelated buffers
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = group,
+    callback = function(args)
+      local bufnr = args.buf
+      if M.current_group_context then
+        local current_groups = M.get_buffer_groups(bufnr)
+        -- If current buffer doesn't belong to the context group, clear context
+        if M.current_group_context == "Ungrouped" then
+          if #current_groups > 0 then
+            M.clear_group_context()
+          end
+        elseif not vim.tbl_contains(current_groups, M.current_group_context) then
+          M.clear_group_context()
+        end
+      end
+    end,
+  })
+  
+  -- Save on exit
   vim.api.nvim_create_autocmd("VimLeavePre", {
-    group = vim.api.nvim_create_augroup("BufferGroupsSave", { clear = true }),
+    group = group,
     callback = function()
       M.cleanup_invalid_buffers()
+      M.save_groups()
+    end,
+  })
+  
+  -- Update mappings when buffers are loaded
+  vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+    group = group,
+    callback = function(args)
+      local bufnr = args.buf
+      local path = vim.api.nvim_buf_get_name(bufnr)
+      if path and path ~= "" then
+        M.path_to_bufnr_cache[path] = bufnr
+        -- Check if this buffer should be in any groups
+        for group_name, group_data in pairs(M.groups) do
+          if group_data.buffer_paths then
+            for _, stored_path in ipairs(group_data.buffer_paths) do
+              if stored_path == path then
+                -- Add to buffers if not already there
+                local found = false
+                for _, existing_bufnr in ipairs(group_data.buffers) do
+                  if existing_bufnr == bufnr then
+                    found = true
+                    break
+                  end
+                end
+                if not found then
+                  table.insert(group_data.buffers, bufnr)
+                  vim.api.nvim_exec_autocmds("User", { pattern = "BufferGroupsUpdate" })
+                end
+              end
+            end
+          end
+        end
+      end
+    end,
+  })
+  
+  -- Periodically save groups
+  vim.api.nvim_create_autocmd({ "BufWritePost", "FocusLost" }, {
+    group = group,
+    callback = function()
       M.save_groups()
     end,
   })

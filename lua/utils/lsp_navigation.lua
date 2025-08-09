@@ -1,46 +1,47 @@
 local M = {}
 
+-- Ensure LSP is started for the current buffer
+local function ensure_lsp_started()
+  local clients = vim.lsp.get_active_clients({ bufnr = 0 })
+  if #clients == 0 then
+    -- Try to start LSP
+    vim.cmd.LspStart()
+    -- Wait a bit for LSP to start
+    vim.wait(1000, function()
+      clients = vim.lsp.get_active_clients({ bufnr = 0 })
+      return #clients > 0
+    end, 100)
+    
+    if #clients == 0 then
+      vim.notify("No LSP server available for this file type", vim.log.levels.WARN)
+      return false
+    end
+  end
+  return true
+end
+
 -- Smart go to definition that:
+-- - Ensures LSP is started
 -- - Jumps directly if there's only one result
 -- - Shows list if there are multiple results
 -- - Shows helpful message if none found
 function M.smart_goto_definition()
-  local params = vim.lsp.util.make_position_params()
+  -- Ensure LSP is started
+  if not ensure_lsp_started() then
+    return
+  end
   
-  vim.lsp.buf_request(0, "textDocument/definition", params, function(err, result, ctx, config)
-    if err then
-      vim.notify("Error getting definition: " .. vim.inspect(err), vim.log.levels.ERROR)
-      return
-    end
-    
-    if not result or vim.tbl_isempty(result) then
-      vim.notify("No definition found", vim.log.levels.INFO)
-      return
-    end
-    
-    -- Handle both single result and array of results
-    local results = {}
-    if result.uri or result.targetUri then
-      -- Single result
-      results = { result }
-    else
-      -- Array of results
-      results = result
-    end
-    
-    if #results == 1 then
-      -- Single result: jump directly
-      vim.lsp.util.jump_to_location(results[1], "utf-8")
-      vim.notify("Jumped to definition", vim.log.levels.INFO)
-    else
-      -- Multiple results: show telescope picker
-      require("telescope.builtin").lsp_definitions()
-    end
-  end)
+  -- Use vim.lsp.buf.definition which handles single/multiple results properly
+  vim.lsp.buf.definition()
 end
 
 -- Smart go to implementation with fallback handling
 function M.smart_goto_implementation()
+  -- Ensure LSP is started
+  if not ensure_lsp_started() then
+    return
+  end
+  
   -- Check if any attached LSP client supports implementation
   local clients = vim.lsp.get_active_clients({ bufnr = 0 })
   local supports_implementation = false
@@ -57,59 +58,49 @@ function M.smart_goto_implementation()
     return
   end
   
-  local params = vim.lsp.util.make_position_params()
-  
-  vim.lsp.buf_request(0, "textDocument/implementation", params, function(err, result, ctx, config)
-    if err then
-      vim.notify("Error getting implementation: " .. vim.inspect(err), vim.log.levels.ERROR)
-      return
-    end
-    
-    if not result or vim.tbl_isempty(result) then
-      vim.notify("No implementation found", vim.log.levels.INFO)
-      return
-    end
-    
-    -- Handle both single result and array of results
-    local results = {}
-    if result.uri or result.targetUri then
-      -- Single result
-      results = { result }
-    else
-      -- Array of results
-      results = result
-    end
-    
-    if #results == 1 then
-      -- Single result: jump directly
-      vim.lsp.util.jump_to_location(results[1], "utf-8")
-      vim.notify("Jumped to implementation", vim.log.levels.INFO)
-    else
-      -- Multiple results: show telescope picker
-      require("telescope.builtin").lsp_implementations()
-    end
-  end)
+  -- Use vim.lsp.buf.implementation which handles single/multiple results properly
+  vim.lsp.buf.implementation()
 end
 
--- Enhanced references function that shows count
+-- Enhanced references function
 function M.smart_goto_references()
-  local params = vim.lsp.util.make_position_params()
-  params.context = { includeDeclaration = true }
+  -- Ensure LSP is started
+  if not ensure_lsp_started() then
+    return
+  end
   
-  vim.lsp.buf_request(0, "textDocument/references", params, function(err, result, ctx, config)
-    if err then
-      vim.notify("Error getting references: " .. vim.inspect(err), vim.log.levels.ERROR)
-      return
+  -- Directly use telescope's lsp_references which handles everything
+  -- Telescope will show the count in its status line
+  require("telescope.builtin").lsp_references({
+    include_declaration = true,
+  })
+end
+
+-- Smart go to declaration with fallback to definition
+function M.smart_goto_declaration()
+  -- Ensure LSP is started
+  if not ensure_lsp_started() then
+    return
+  end
+  
+  -- Check if any client supports declaration
+  local clients = vim.lsp.get_active_clients({ bufnr = 0 })
+  local supports_declaration = false
+  
+  for _, client in ipairs(clients) do
+    if client.supports_method("textDocument/declaration") then
+      supports_declaration = true
+      break
     end
-    
-    if not result or vim.tbl_isempty(result) then
-      vim.notify("No references found", vim.log.levels.INFO)
-      return
-    end
-    
-    vim.notify(string.format("Found %d reference(s)", #result), vim.log.levels.INFO)
-    require("telescope.builtin").lsp_references()
-  end)
+  end
+  
+  if supports_declaration then
+    vim.lsp.buf.declaration()
+  else
+    -- Fallback to definition if declaration not supported
+    vim.notify("Declaration not supported, using definition instead", vim.log.levels.INFO)
+    M.smart_goto_definition()
+  end
 end
 
 return M
