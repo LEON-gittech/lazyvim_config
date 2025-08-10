@@ -315,6 +315,29 @@ local function buffer_picker(opts)
     prompt_title = "Grouped Buffers (C-f: filter, C-a: add to group, C-d: remove)"
   end
   
+  -- Calculate the index of the current buffer or first non-separator entry
+  local current_bufnr = vim.api.nvim_get_current_buf()
+  local default_index = 1
+  local first_buffer_index = nil
+  
+  for i, entry_data in ipairs(grouped_results) do
+    if not entry_data.is_separator then
+      -- Found a buffer entry
+      if not first_buffer_index then
+        first_buffer_index = i
+      end
+      if entry_data.bufnr == current_bufnr then
+        default_index = i
+        break
+      end
+    end
+  end
+  
+  -- If current buffer not found, use first buffer entry
+  if default_index == 1 and first_buffer_index then
+    default_index = first_buffer_index
+  end
+  
   pickers.new(opts, {
     prompt_title = prompt_title,
     finder = finders.new_table({
@@ -324,6 +347,7 @@ local function buffer_picker(opts)
     sorter = conf.generic_sorter(opts),
     previewer = conf.grep_previewer(opts),
     sorting_strategy = "ascending", -- Show results from top to bottom
+    default_selection_index = default_index, -- Start at current buffer or first buffer
     attach_mappings = function(prompt_bufnr, map)
       local function filter_by_group()
         local groups = buffer_groups.list_groups()
@@ -589,17 +613,6 @@ local function buffer_picker(opts)
       map("n", "<Tab>", toggle_selection_and_move_next)
       map("i", "<S-Tab>", toggle_selection_and_move_previous)
       map("n", "<S-Tab>", toggle_selection_and_move_previous)
-      
-      -- Ensure initial selection skips separators after mappings are set
-      vim.defer_fn(function()
-        local picker = action_state.get_current_picker(prompt_bufnr)
-        if picker then
-          local entry = action_state.get_selected_entry()
-          if entry and entry.is_separator then
-            move_selection_next_impl()
-          end
-        end
-      end, 10)
       
       return true
     end,
