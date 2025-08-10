@@ -22,13 +22,15 @@ Buffer Groups is a powerful buffer organization system for Neovim that allows yo
 - **Smart Filtering**: Quickly filter buffers by group in telescope picker
 - **Batch Operations**: Multi-select buffers for group operations
 - **Real-time Updates**: UI components update immediately when groups change
+- **Intelligent Cursor Positioning**: Buffer picker automatically positions cursor on current buffer
 
 ### 🎨 Visual Features
 
 - **Colored Group Tags**: Each group gets a unique color from a curated palette
 - **Tabline Organization**: Buffers are visually grouped with separators
 - **Statusline Integration**: Shows current buffer's groups
-- **Telescope Integration**: Group tags in buffer picker
+- **Telescope Integration**: Group tags in buffer picker with visual borders
+- **Clean Message Display**: Filtered telescope artifacts for distraction-free experience
 
 ## Installation
 
@@ -95,8 +97,10 @@ Three ways to add buffers:
 #### Enhanced Buffer Browser (`<leader>bb`)
 The standard buffer browser now shows:
 - Colored group tags for each buffer
+- Visual group borders and separators
 - Helpful key hints in the prompt
 - Multi-select capability
+- **Smart initial selection**: Cursor starts at current buffer or first available buffer (never on separators)
 
 #### Filter by Group
 While in the buffer picker (`<leader>bb`):
@@ -272,9 +276,14 @@ Groups: Feature-Core, Feature-Tests, Feature-Docs, Related-Files
 - Trigger update: `:doautocmd User BufferGroupsUpdate`
 - Restart Neovim if needed
 
+#### Telescope Messages
+- Telescope artifacts like `}` are automatically filtered by noice.nvim
+- If messages still appear, check `:checkhealth noice`
+
 #### Performance
 - Groups are lightweight and cached
 - Cleanup happens automatically on save
+- Initial cursor positioning is optimized for instant response
 
 ## Examples
 
