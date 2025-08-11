@@ -1,9 +1,75 @@
 return {
   "nvim-neo-tree/neo-tree.nvim",
   opts = {
+    -- Default component configurations  
+    default_component_configs = {
+      container = {
+        enable_character_fade = false, -- Disable fade to show full text
+        width = "100%",
+        right_padding = 0,
+      },
+      name = {
+        trailing_slash = false,
+        use_git_status_colors = true,
+        highlight = "NeoTreeFileName",
+      },
+      -- Custom renderer for name to support wrapping
+      indent = {
+        indent_size = 2,
+        padding = 1,
+        with_markers = true,
+        indent_marker = "│",
+        last_indent_marker = "└",
+        highlight = "NeoTreeIndentMarker",
+      },
+    },
+    -- Window configuration
+    window = {
+      position = "left",
+      width = 30,
+      mapping_options = {
+        noremap = true,
+        nowait = true,
+      },
+      -- Neo-tree window configuration
+      window_options = {
+        -- Note: wrap is controlled by neo-tree internally and cannot be overridden
+        -- Use custom name components for better filename display control
+      },
+      mappings = {
+        ["<"] = "prev_source",
+        [">"] = "next_source",
+        ["<C-Left>"] = function() 
+          vim.cmd("vertical resize -2")
+          vim.defer_fn(function()
+            require("neo-tree.sources.manager").refresh("filesystem")
+          end, 10)
+        end,
+        ["<C-Right>"] = function() 
+          vim.cmd("vertical resize +2")
+          vim.defer_fn(function()
+            require("neo-tree.sources.manager").refresh("filesystem")
+          end, 10)
+        end,
+        ["<M-,>"] = function() 
+          vim.cmd("vertical resize -5")
+          vim.defer_fn(function()
+            require("neo-tree.sources.manager").refresh("filesystem")
+          end, 10)
+        end,
+        ["<M-.>"] = function() 
+          vim.cmd("vertical resize +5")
+          vim.defer_fn(function()
+            require("neo-tree.sources.manager").refresh("filesystem")
+          end, 10)
+        end,
+      },
+    },
+    -- Enable auto-expand for long filenames
     filesystem = {
       hijack_netrw_behavior = "disabled", -- 禁用自动打开
       window = {
+        width = 30,
         mappings = {
           ["m"] = "move", -- 恢复默认的 move 命令
           ["M"] = "move_visual", -- 多选移动
@@ -368,20 +434,94 @@ return {
     },
   },
   config = function(_, opts)
+    -- Register custom components
+    local cc = require("neo-tree.sources.common.components")
+    local custom = require("neo-tree-custom-components")
+    cc.name_smart = custom.name_smart
+    cc.name_full = custom.name_full
+    cc.name_wrapped = custom.name_wrapped
+    cc.name_dynamic = custom.name_dynamic
+    
+    -- Choose your preferred name display strategy:
+    -- "name_wrapped" - Optimized truncation that maximizes visible content (RECOMMENDED)
+    -- "name_dynamic" - Auto-adjusts neo-tree width based on longest filename
+    -- "name_full" - Shows complete filenames (causes horizontal scrolling)
+    -- "name_smart" - Intelligent truncation preserving extensions
+    -- "name" - Default neo-tree behavior
+    local name_component = "name_wrapped"  -- Change this to switch modes
+    
+    -- Add renderers configuration to opts before setup
+    opts.renderers = {
+      directory = {
+        { "indent" },
+        { "icon" },
+        { name_component, use_git_status_colors = true },
+        { "diagnostics" },
+        { "git_status" },
+      },
+      file = {
+        { "indent" },
+        { "icon" },
+        { name_component, use_git_status_colors = true },
+        { "diagnostics" },
+        { "git_status" },
+      },
+    }
+    
     require("neo-tree").setup(opts)
     
-    -- Disable horizontal scrolling in neo-tree windows
-    vim.api.nvim_create_autocmd("FileType", {
+    -- Configure neo-tree window behavior based on name component choice
+    vim.api.nvim_create_autocmd({"FileType", "BufEnter", "BufWinEnter"}, {
       pattern = "neo-tree",
       callback = function()
         local buf = vim.api.nvim_get_current_buf()
-        -- Disable horizontal scroll wheel events
-        vim.keymap.set({"n", "i", "v"}, "<ScrollWheelLeft>", "<nop>", { buffer = buf, silent = true })
-        vim.keymap.set({"n", "i", "v"}, "<ScrollWheelRight>", "<nop>", { buffer = buf, silent = true })
-        vim.keymap.set({"n", "i", "v"}, "<S-ScrollWheelLeft>", "<nop>", { buffer = buf, silent = true })
-        vim.keymap.set({"n", "i", "v"}, "<S-ScrollWheelRight>", "<nop>", { buffer = buf, silent = true })
-        vim.keymap.set({"n", "i", "v"}, "<C-ScrollWheelLeft>", "<nop>", { buffer = buf, silent = true })
-        vim.keymap.set({"n", "i", "v"}, "<C-ScrollWheelRight>", "<nop>", { buffer = buf, silent = true })
+        local win = vim.api.nvim_get_current_win()
+        
+        vim.schedule(function()
+          if vim.api.nvim_win_is_valid(win) and vim.bo[buf].filetype == "neo-tree" then
+            if name_component == "name_full" then
+              -- Allow horizontal scrolling for full filenames  
+              vim.wo[win].wrap = false
+              vim.wo[win].sidescrolloff = 0
+              vim.wo[win].sidescroll = 1
+            end
+            -- Note: name_wrapped uses intelligent truncation, no special window settings needed
+            -- Note: name_dynamic will auto-adjust window width as needed
+          end
+        end)
+        
+        -- Store the initial width for comparison (used by name_dynamic)
+        vim.b.neotree_last_width = vim.api.nvim_win_get_width(win)
+      end,
+    })
+    
+    -- Auto-refresh neo-tree on window resize
+    vim.api.nvim_create_autocmd({"WinResized", "VimResized"}, {
+      callback = function()
+        -- Check all neo-tree windows
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          local buf = vim.api.nvim_win_get_buf(win)
+          local ft = vim.api.nvim_buf_get_option(buf, "filetype")
+          
+          if ft == "neo-tree" then
+            local current_width = vim.api.nvim_win_get_width(win)
+            local last_width = vim.b[buf].neotree_last_width or 0
+            
+            -- Only refresh if width actually changed
+            if current_width ~= last_width then
+              vim.b[buf].neotree_last_width = current_width
+              
+              -- Refresh neo-tree to re-render with new width
+              local ok, manager = pcall(require, "neo-tree.sources.manager")
+              if ok then
+                -- Small delay to ensure resize is complete
+                vim.defer_fn(function()
+                  manager.refresh("filesystem")
+                end, 50)
+              end
+            end
+          end
+        end
       end,
     })
   end,

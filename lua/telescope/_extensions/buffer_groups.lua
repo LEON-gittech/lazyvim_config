@@ -512,7 +512,7 @@ local function buffer_picker(opts)
         end
       end)
       
-      local function delete_buffer_i()
+      local function close_buffer()
         local entry = action_state.get_selected_entry()
         if not entry or entry.is_separator then 
           vim.notify("No buffer selected", vim.log.levels.WARN)
@@ -520,84 +520,120 @@ local function buffer_picker(opts)
         end
         
         local bufnr = entry.bufnr
-        local current_buf = vim.api.nvim_get_current_buf()
-        
-        -- 如果要删除的是当前buffer，先切换到其他buffer
-        if bufnr == current_buf then
-          local buffers = vim.api.nvim_list_bufs()
-          local found_alternative = false
-          
-          for _, buf in ipairs(buffers) do
-            if buf ~= bufnr and vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
-              vim.api.nvim_set_current_buf(buf)
-              found_alternative = true
-              break
-            end
-          end
-          
-          -- 如果没有其他buffer，创建一个新的空buffer
-          if not found_alternative then
-            vim.cmd("enew")
-          end
-        end
-        
-        -- 安全删除buffer
-        local ok, err = pcall(vim.api.nvim_buf_delete, bufnr, { force = false })
-        if not ok then
-          vim.notify("Failed to delete buffer: " .. tostring(err), vim.log.levels.ERROR)
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          vim.notify("Invalid buffer", vim.log.levels.WARN)
           return
         end
         
-        -- 延迟刷新telescope显示，保持insert mode
-        vim.defer_fn(function()
-          actions.close(prompt_bufnr)
-          local new_opts = vim.tbl_extend("force", opts, { initial_mode = "insert" })
-          buffer_picker(new_opts)
-        end, 100)
+        -- Don't close the buffer if it's the only one
+        local listed_buffers = vim.tbl_filter(function(buf)
+          return vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted
+        end, vim.api.nvim_list_bufs())
+        
+        if #listed_buffers <= 1 then
+          vim.notify("Cannot close the last buffer", vim.log.levels.WARN)
+          return
+        end
+        
+        local current_picker = action_state.get_current_picker(prompt_bufnr)
+        
+        -- Use telescope's built-in delete_selection method (removes from list)
+        current_picker:delete_selection(function(selection)
+          if not selection or not selection.bufnr then
+            return false
+          end
+          
+          local buf_to_close = selection.bufnr
+          
+          -- If this is the current buffer, switch to another buffer first
+          if buf_to_close == vim.api.nvim_get_current_buf() then
+            -- Find another suitable buffer
+            for _, buf in ipairs(listed_buffers) do
+              if buf ~= buf_to_close and vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted then
+                vim.api.nvim_set_current_buf(buf)
+                break
+              end
+            end
+          end
+          
+          -- Close buffer in all windows (but don't delete it)
+          for _, win in ipairs(vim.api.nvim_list_wins()) do
+            if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf_to_close then
+              -- Find an alternative buffer for this window
+              for _, buf in ipairs(listed_buffers) do
+                if buf ~= buf_to_close and vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted then
+                  vim.api.nvim_win_set_buf(win, buf)
+                  break
+                end
+              end
+            end
+          end
+          
+          -- Set buffer as unlisted (hides it from buffer list but doesn't delete)
+          vim.bo[buf_to_close].buflisted = false
+          
+          return true
+        end)
       end
       
-      local function delete_buffer_n()
+      local function delete_buffer()
         local entry = action_state.get_selected_entry()
         if not entry or entry.is_separator then 
           vim.notify("No buffer selected", vim.log.levels.WARN)
           return 
         end
         
-        local bufnr = entry.bufnr
-        local current_buf = vim.api.nvim_get_current_buf()
+        local current_picker = action_state.get_current_picker(prompt_bufnr)
         
-        -- 如果要删除的是当前buffer，先切换到其他buffer
-        if bufnr == current_buf then
-          local buffers = vim.api.nvim_list_bufs()
-          local found_alternative = false
+        -- Use telescope's built-in delete_selection method
+        current_picker:delete_selection(function(selection)
+          if not selection or not selection.bufnr then
+            return false
+          end
           
-          for _, buf in ipairs(buffers) do
-            if buf ~= bufnr and vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
-              vim.api.nvim_set_current_buf(buf)
-              found_alternative = true
-              break
+          local bufnr = selection.bufnr
+          if not vim.api.nvim_buf_is_valid(bufnr) then
+            vim.notify("Invalid buffer", vim.log.levels.WARN)
+            return false
+          end
+          
+          -- Check if buffer is terminal (needs force delete)
+          local force = false
+          pcall(function()
+            force = vim.api.nvim_buf_get_option(bufnr, "buftype") == "terminal"
+          end)
+          
+          local ok, err = pcall(vim.api.nvim_buf_delete, bufnr, { force = force })
+          
+          if not ok then
+            -- Common error messages that we can handle gracefully
+            local error_msg = tostring(err or "Unknown error")
+            if error_msg:match("Invalid buffer id") or error_msg:match("Buffer.*not found") then
+              -- Buffer was already deleted, this is okay
+              return true
+            else
+              vim.notify("Failed to delete buffer: " .. error_msg, vim.log.levels.ERROR)
+              return false
             end
           end
           
-          -- 如果没有其他buffer，创建一个新的空buffer
-          if not found_alternative then
-            vim.cmd("enew")
-          end
-        end
-        
-        -- 安全删除buffer
-        local ok, err = pcall(vim.api.nvim_buf_delete, bufnr, { force = false })
-        if not ok then
-          vim.notify("Failed to delete buffer: " .. tostring(err), vim.log.levels.ERROR)
-          return
-        end
-        
-        -- 延迟刷新telescope显示，保持normal mode
-        vim.defer_fn(function()
-          actions.close(prompt_bufnr)
-          local new_opts = vim.tbl_extend("force", opts, { initial_mode = "normal" })
-          buffer_picker(new_opts)
-        end, 100)
+          -- Remove buffer from all groups
+          pcall(function()
+            local ok, buffer_groups = pcall(require, "utils.buffer_groups")
+            if ok and buffer_groups and buffer_groups.get_buffer_groups then
+              local groups = buffer_groups.get_buffer_groups(bufnr)
+              if groups and type(groups) == "table" then
+                for _, group in ipairs(groups) do
+                  if buffer_groups.remove_buffer_from_group then
+                    buffer_groups.remove_buffer_from_group(group, bufnr)
+                  end
+                end
+              end
+            end
+          end)
+          
+          return true
+        end)
       end
       
       map("i", "<C-a>", add_to_group)
@@ -606,9 +642,13 @@ local function buffer_picker(opts)
       map("n", "<C-d>", remove_from_group)
       map("i", "<C-f>", filter_by_group)
       map("n", "<C-f>", filter_by_group)
-      map("i", "<C-x>", delete_buffer_i)
-      map("n", "<C-x>", delete_buffer_n)
-      map("n", "dd", delete_buffer_n)
+      map("i", "<C-x>", close_buffer)    -- Close buffer (hide from buffer list)
+      map("n", "<C-x>", close_buffer)    -- Close buffer (hide from buffer list)  
+      map("n", "dd", close_buffer)       -- Close buffer (hide from buffer list)
+      map("i", "<M-d>", delete_buffer)   -- Delete buffer completely
+      map("n", "<M-d>", delete_buffer)   -- Delete buffer completely
+      map("i", "<C-Del>", delete_buffer) -- Alt way to delete buffer
+      map("n", "<C-Del>", delete_buffer) -- Alt way to delete buffer
       map("i", "<Tab>", toggle_selection_and_move_next)
       map("n", "<Tab>", toggle_selection_and_move_next)
       map("i", "<S-Tab>", toggle_selection_and_move_previous)

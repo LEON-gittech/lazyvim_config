@@ -69,10 +69,58 @@ function M.smart_goto_references()
     return
   end
   
-  -- Directly use telescope's lsp_references which handles everything
-  -- Telescope will show the count in its status line
+  -- Custom previewer that correctly positions the cursor
+  local previewers = require("telescope.previewers")
+  local from_entry = require("telescope.from_entry")
+  local conf = require("telescope.config").values
+  
+  local custom_previewer = previewers.new_buffer_previewer({
+    title = "LSP References Preview",
+    get_buffer_by_name = function(_, entry)
+      return from_entry.path(entry, false, false)
+    end,
+    define_preview = function(self, entry)
+      local p = from_entry.path(entry, true, false)
+      if p == nil or p == "" then
+        return
+      end
+      
+      conf.buffer_previewer_maker(p, self.state.bufnr, {
+        bufname = self.state.bufname,
+        winid = self.state.winid,
+        callback = function(bufnr)
+          -- Clear previous highlights
+          pcall(vim.api.nvim_buf_clear_namespace, bufnr, vim.api.nvim_create_namespace("telescope_preview"), 0, -1)
+          
+          if entry.lnum and entry.lnum > 0 then
+            -- Highlight the line
+            pcall(
+              vim.api.nvim_buf_add_highlight,
+              bufnr,
+              vim.api.nvim_create_namespace("telescope_preview"),
+              "TelescopePreviewLine",
+              entry.lnum - 1,
+              0,
+              -1
+            )
+            
+            -- Position cursor exactly at the referenced line (not middle of range)
+            pcall(vim.api.nvim_win_set_cursor, self.state.winid, { entry.lnum, 0 })
+            
+            -- Center the view on the cursor
+            vim.api.nvim_buf_call(bufnr, function()
+              vim.cmd("norm! zz")
+            end)
+          end
+        end,
+      })
+    end,
+  })
+  
+  -- Use telescope's lsp_references with custom previewer
   require("telescope.builtin").lsp_references({
     include_declaration = true,
+    previewer = custom_previewer,
   })
 end
 
